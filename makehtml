@@ -1,0 +1,10 @@
+#!/bin/bash
+
+pandoc -s --mathjax --smart -t html5 -o $1.html $1.md
+
+
+# To use this script simply type:
+#
+# $ makehtml <name>
+#
+# at the command line, where <name>.md is the source file. 

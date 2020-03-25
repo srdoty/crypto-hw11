@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title></title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+  </style>
+  <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_CHTML-full" type="text/javascript"></script>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<h1 id="homework-11-rsa-implementation">Homework 11: RSA Implementation</h1>
+<p>Now that we know how to produce random large primes quickly and easily (March 24th lecture) we can implement RSA encryption in Python.</p>
+<h3 id="rsa-key-generation">RSA key generation</h3>
+<p>Let’s begin with RSA keys, both public and private. For this we will need the Miller-Rabin code as well as the extended Euclidean algorithm. We illustrate a worked example in Python’s REPL:</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="op">&gt;&gt;&gt;</span> <span class="im">from</span> MillerRabin <span class="im">import</span> <span class="op">*</span>
+<span class="op">&gt;&gt;&gt;</span> <span class="im">from</span> xgcd <span class="im">import</span> <span class="op">*</span>
+<span class="op">&gt;&gt;&gt;</span> a <span class="op">=</span> <span class="dv">2</span><span class="op">**</span><span class="dv">500</span><span class="op">;</span> b <span class="op">=</span> <span class="dv">2</span><span class="op">**</span><span class="dv">501</span> <span class="co"># set upper &amp; lower limits</span>
+<span class="op">&gt;&gt;&gt;</span> p <span class="op">=</span> findPrime(a,b)
+<span class="op">&gt;&gt;&gt;</span> q <span class="op">=</span> findPrime(a,b)
+<span class="op">&gt;&gt;&gt;</span> N <span class="op">=</span> p<span class="op">*</span>q</code></pre></div>
+<p>The theory of RSA says that we should pick an exponent <span class="math inline">\(e\)</span> such that <span class="math inline">\(\gcd(e,\varphi(N)) = 1\)</span>, where <span class="math inline">\(\varphi(N) = (p-1)(q-1)\)</span>. It is common, but not required, to pick <span class="math inline">\(e=65537\)</span>. Whatever <span class="math inline">\(e\)</span> you pick, make <em>sure</em> that it is relatively prime to <span class="math inline">\(\varphi(N)\)</span>. Notice that <span class="math inline">\(65537\)</span> is a prime number, so it is more likely to be relatively prime to <span class="math inline">\(\varphi(N)\)</span>. Then we need to compute <span class="math inline">\(d = e^{-1} \pmod{\varphi(N)}\)</span>.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="op">&gt;&gt;&gt;</span> phi <span class="op">=</span> (p<span class="dv">-1</span>)<span class="op">*</span>(q<span class="dv">-1</span>) <span class="co"># Euler&#39;s phi(N)</span>
+<span class="op">&gt;&gt;&gt;</span> e <span class="op">=</span> <span class="dv">65537</span> <span class="co"># a common choice</span>
+<span class="op">&gt;&gt;&gt;</span> gcd(e,phi) <span class="co"># check that e is invertible mod phi(N)</span>
+<span class="dv">1</span>
+<span class="op">&gt;&gt;&gt;</span> g,x,y <span class="op">=</span> xgcd(e,phi) <span class="co"># extended EA</span>
+<span class="op">&gt;&gt;&gt;</span> d <span class="op">=</span> x <span class="op">%</span> phi <span class="co"># should be the inverse of e mod phi(N)</span>
+<span class="op">&gt;&gt;&gt;</span> e<span class="op">*</span>d <span class="op">%</span> phi <span class="op">==</span> <span class="dv">1</span>  <span class="co"># check that it works</span>
+<span class="va">True</span>
+<span class="op">&gt;&gt;&gt;</span> public_key <span class="op">=</span> (e,N)
+<span class="op">&gt;&gt;&gt;</span> private_key <span class="op">=</span> (d,N)</code></pre></div>
+<p>In case you are curious, the actual numerical values of the keys computed above are shown below:</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="op">&gt;&gt;&gt;</span> public_key
+(<span class="dv">65537</span>, <span class="dv">23632492794366509631564894469037341689380591582483083361439296741305808</span>
+<span class="dv">3605708731061044341927190173127537122616188971810783673145143352774939575308916</span>
+<span class="dv">7742334120949216431439211281179218683829433835331417781088550380691858588567901</span>
+<span class="dv">6125229066576775873018296518922375624132713674027772807632211425459035041</span>)
+<span class="op">&gt;&gt;&gt;</span> private_key
+(<span class="dv">734429376905965640273558761693216867094335274364760301543302495888086727924297</span>
+<span class="dv">6830676244124740348591007444003118728029769795796187092277594632543931986324046</span>
+<span class="dv">0868473437120480041657372462759063791097545404311930124559745125550750667015177</span>
+<span class="dv">49233170387010823069022646274368666304758135051815669064152062273</span>, <span class="dv">236324927943</span>
+<span class="dv">6650963156489446903734168938059158248308336143929674130580836057087310610443419</span>
+<span class="dv">2719017312753712261618897181078367314514335277493957530891677423341209492164314</span>
+<span class="dv">3921128117921868382943383533141778108855038069185858856790161252290665767758730</span>
+<span class="dv">18296518922375624132713674027772807632211425459035041</span>)</code></pre></div>
+<p>Note that I inserted line feed breaks in the above numbers in order to make them fit on one page without overflowing into the margin.</p>
+<h3 id="rsa-encryption-and-decryption">RSA encryption and decryption</h3>
+<p>Now that we have our RSA keys, it is trivial to implement RSA encryption and decryption. Pick any number <span class="math inline">\(x\)</span> less than <span class="math inline">\(N\)</span>. This number represents your plaintext message, or part of it. The RSA theory says that the corresponding ciphertext is <span class="math inline">\(y = x^e \pmod{N}\)</span>.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="op">&gt;&gt;&gt;</span> x <span class="op">=</span> <span class="dv">12345</span> <span class="co"># test plaintext message</span>
+<span class="op">&gt;&gt;&gt;</span> y <span class="op">=</span> modpower(x,e,N) <span class="co"># corresponding ciphertext</span></code></pre></div>
+<p>Also, RSA decryption is given by <span class="math inline">\(x = y^d \pmod{N}\)</span>. Let’s test that.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="op">&gt;&gt;&gt;</span> deciphered <span class="op">=</span> modpower(y,d,N)
+<span class="op">&gt;&gt;&gt;</span> deciphered <span class="op">==</span> x  <span class="co"># did it work?</span>
+<span class="va">True</span></code></pre></div>
+<p>Notice the use of the stand-alone <code>modpower</code> function in both RSA encryption and decryption. While this is not so important when the exponent (<span class="math inline">\(e\)</span> for instance) is small, it is absolutely necessary when the exponent is very large (as <span class="math inline">\(d\)</span> will be here).</p>
+<h3 id="representation">Representation</h3>
+<p>There is one remaining problem to be solved before we have a complete system: we need a method of converting arbitrary text into (a sequence of) integers. We need this because messages are given as strings while RSA encryption and decryption algorithms operate on integers (residues less than <span class="math inline">\(N\)</span>). Let’s agree to call this problem the <em>representation problem</em>. Actually, we face this problem in any public-key cryptosystem.</p>
+<p>Given a string of characters, how can we represent it as an integer? One way is to use Python’s builtin <code>ord</code> function. If you look this up, you will see that if <code>c</code> is a character in some string then <code>ord(c)</code> returns an integer between 0 and 1114111. Note that here I’m talking about Python 3, which uses Unicode to encode characters of strings; Python 2 was different. Anyway, the inverse function of <code>ord</code> in Python is the function <code>chr</code>, which accepts as input any integer between 0 and 1114111 and returns the equivalent character whose Unicode representation is defined by that number.</p>
+<p>Given a string <code>s</code> of characters, we can apply the <code>ord</code> function to each character to obtain a list of integers. If <span class="math inline">\(s_k\)</span> is the <span class="math inline">\(k\)</span>th character, then let’s set <span class="math inline">\(d_k = \text{ord}(s_k)\)</span>. Then we can define an integer representation of the string <span class="math inline">\(s\)</span> by the rule <span class="math display">\[ \text{rep}(s) = \sum_k  d_k R^k = \sum_k  \text{ord}(s_k) R^k\]</span> where <span class="math inline">\(R = 1114112\)</span> is the <strong>radix</strong> (number of distinct symbols) of the Unicode system. Then <span class="math inline">\(\text{rep}(s)\)</span> is an integer representation of the string <span class="math inline">\(s\)</span>.</p>
+<p>We can also go backwards, from the integer <span class="math inline">\(z = \text{rep}(s)\)</span> back to the original string <span class="math inline">\(s = \text{unrep}(z)\)</span>. To do that, we apply the division algorithm (long division) to write <span class="math inline">\(z\)</span> (uniquely) in the form <span class="math display">\[ z = q R + r, \qquad \text{where } 0 \le r &lt; R. \]</span> Needless to say, <span class="math inline">\(q\)</span> and <span class="math inline">\(r\)</span> are integers. Setting <span class="math inline">\(s_0 = \text{chr}(r)\)</span>, we then have <span class="math inline">\(s = s_0 \Vert \text{unrep}(q)\)</span>, where <span class="math inline">\(s = \text{unrep}(z)\)</span> is the original string and the symbol <span class="math inline">\(\Vert\)</span> is the mathematical symbol for concatenation. This is a recursive description, but we know how to turn recursion into iteration.</p>
+<p>The above considerations lead to the Python code in the file <code>represent.py</code>, which is discussed in greater detail in the presentation on this topic posted for Tuesday 24th March on Sakai. You should view that presentation now, if you have not already done so. What we are doing is <em>almost</em> equivalent to expressing <span class="math inline">\(z\)</span> in base <span class="math inline">\(R\)</span>; “almost” because there is an order reversal in the above idea that is slightly easier to work with in code.</p>
+<p>The Unicode system is truly an astounding human accomplishment. It is a system (actually, several systems) of binary encoding of all the symbols of all human languages, both past and present! This includes all of the dead languages that we know about. Read the Wikipedia article on this fascinating topic if you wish to learn more.</p>
+<p>We are still not done with this topic. The problem is that if the string <span class="math inline">\(s\)</span> is too long, then its representation <span class="math inline">\(\text{rep}(s)\)</span> can be larger than <span class="math inline">\(N\)</span>, the modulus for our RSA system. If that ever happens then our RSA breaks down, so we have to ensure that it can never happen. The solution is easy: if <span class="math inline">\(s\)</span> is too long then we simply break it into blocks of characters each short enough (say of length <span class="math inline">\(B\)</span>) to satisfy the requirement <span class="math inline">\(\text{rep}(s) &lt; N\)</span>, and apply RSA encryption and decryption functions block by block. A little thought reveals that <span class="math display">\[
+\text{the maximum length $B$ of each block is the integer part of $\log_R(N)$}
+\]</span> because we just need to make <span class="math inline">\(R^B &lt; N\)</span>, as <span class="math inline">\(\text{rep}(s) &lt; R^B\)</span> if the length of <span class="math inline">\(s\)</span> is <span class="math inline">\(B\)</span>.</p>
+<p>The above considerations lead to the code for <code>replist</code> and <code>unreplist</code> functions, given in the file <code>represent.py</code>. The function <span class="math inline">\(\text{replist}(s,B)\)</span> accepts a string <span class="math inline">\(s\)</span> and a blocksize <span class="math inline">\(B\)</span> as inputs and returns a list of integer representations of the blocks (of length <span class="math inline">\(B\)</span>) of the string <span class="math inline">\(s\)</span>. The function <span class="math inline">\(\text{unreplist}(l)\)</span> performs the inverse operation, turning its input list <span class="math inline">\(l\)</span> back into a string.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="op">&gt;&gt;&gt;</span> <span class="im">from</span> represent <span class="im">import</span> <span class="op">*</span>
+<span class="op">&gt;&gt;&gt;</span> s <span class="op">=</span> <span class="st">&quot;I can&#39;t be 100</span><span class="sc">% s</span><span class="st">ure!&quot;</span> <span class="co"># my test string</span>
+<span class="op">&gt;&gt;&gt;</span> x <span class="op">=</span> rep(s)
+<span class="op">&gt;&gt;&gt;</span> unrep(x)  <span class="co"># should give s back again</span>
+<span class="co">&quot;I can&#39;t be 100% sure!&quot;</span></code></pre></div>
+<p>If you are curious to see what integer value <span class="math inline">\(x\)</span> has here, you can simply evaluate to print it, as usual:</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="op">&gt;&gt;&gt;</span> x
+<span class="dv">2864785916456276893918276164279249573594863140671406456854435715311368912980007</span>
+<span class="dv">58838537258955941401026636343208963219652681</span></code></pre></div>
+<p>Note that once again I inserted an extra linefeed in the number to make it possible to display on a printout. We can also, if we desire, convert our string <span class="math inline">\(s\)</span> into a sequence of integers by using <span class="math inline">\(\text{replist}(s,B)\)</span> with a chosen blocksize.</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="op">&gt;&gt;&gt;</span> mylist <span class="op">=</span> replist(s,<span class="dv">3</span>) <span class="co"># block length 3</span>
+<span class="op">&gt;&gt;&gt;</span> mylist
+[<span class="dv">122883344957513</span>, <span class="dv">48408698945633</span>, <span class="dv">121642099409012</span>, <span class="dv">60821067530341</span>,
+<span class="dv">45926138773552</span>, <span class="dv">145225857302560</span>, <span class="dv">40961215627378</span>]
+<span class="op">&gt;&gt;&gt;</span> unreplist(mylist) <span class="co"># should return the original string</span>
+<span class="co">&quot;I can&#39;t be 100% sure!&quot;</span>
+<span class="op">&gt;&gt;&gt;</span>
+<span class="op">&gt;&gt;&gt;</span> mylist <span class="op">=</span> replist(s,<span class="dv">2</span>) <span class="co"># block length 2</span>
+<span class="op">&gt;&gt;&gt;</span> mylist
+[<span class="dv">35651657</span>, <span class="dv">108068963</span>, <span class="dv">43450478</span>, <span class="dv">35651700</span>, <span class="dv">112525410</span>, <span class="dv">54591520</span>, <span class="dv">53477424</span>,
+<span class="dv">35651621</span>, <span class="dv">130351219</span>, <span class="dv">112525426</span>, <span class="dv">33</span>]
+<span class="op">&gt;&gt;&gt;</span> unreplist(mylist) 
+<span class="co">&quot;I can&#39;t be 100% sure!&quot;</span></code></pre></div>
+<p>Notice that the <code>unreplist</code> function does not need to know the block size.</p>
+<h3 id="summary-of-rsa-implementation">Summary of RSA implementation</h3>
+<p>Putting everything together, we get a setup for using RSA to send and receive messages of arbitrary length, for arbitrary Unicode strings. Suppose that Bob wishes to send a secret message to Alice, whose public RSA key is <span class="math inline">\((e,N)\)</span>. We assume that only Alice knows the corresponding secret key <span class="math inline">\(d\)</span>. Given a string <span class="math inline">\(s\)</span>, Bob does the following:</p>
+<ol type="1">
+<li>Compute the blocksize <span class="math inline">\(B = \lfloor \log_R(N) \rfloor\)</span>.</li>
+<li>Compute <span class="math inline">\(x = \text{replist}(s,B)\)</span>.</li>
+<li>For each integer in the list <span class="math inline">\(x\)</span>, compute the corresponding <span class="math inline">\(y = x^e \pmod{N}\)</span>. This results in a list of integers that we can call <span class="math inline">\(y\)</span>.</li>
+<li>Send the list <span class="math inline">\(y\)</span> to Alice.</li>
+</ol>
+<p>When Alice receives the list <span class="math inline">\(y\)</span> from Bob, she uses her secret key <span class="math inline">\(d\)</span> corresponding to the public exponent <span class="math inline">\(e\)</span> to compute:</p>
+<ol start="5" type="1">
+<li>For each integer in the list <span class="math inline">\(y\)</span>, compute the corresponding <span class="math inline">\(x =  y^d \pmod{N}\)</span>. Call the resulting list <span class="math inline">\(x\)</span>.</li>
+<li>Compute <span class="math inline">\(\text{unreplist}(x)\)</span>, which is the original message string <span class="math inline">\(s\)</span>.</li>
+</ol>
+<p>If Alice desires to send a reply message to Bob, she uses <em>Bob’s public key</em> to encrypt it, repeating the above steps 1–4. When Bob receives her message, he uses steps 5–6 with <em>his</em> corresponding secret key to decrypt the message.</p>
+<h2 id="assignment">Assignment</h2>
+<p>In a new file, define three Python functions for implementing RSA. At the top of the file, include import statements to import needed code from other files as appropriate. The functions should have the following names and parameters:</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python"><span class="kw">def</span> RSAkeygen(bitsize):
+    <span class="co">&quot;&quot;&quot;returns a triple (e,d,N) defining RSA public and private keys,</span>
+<span class="co">    where N = p*q is a product of two random primes of roughly bitsize </span>
+<span class="co">    bits each&quot;&quot;&quot;</span>
+
+<span class="kw">def</span> RSAencrypt(e,N,s):
+    <span class="co">&quot;&quot;&quot;returns a list y of RSA encrypted integers, where s is a string, </span>
+<span class="co">    using the given keypair (e,N)&quot;&quot;&quot;</span>
+
+<span class="kw">def</span> RSAdecrypt(d,N,y):
+    <span class="co">&quot;&quot;&quot;returns a string s, where y is a list of RSA encrypted integers, </span>
+<span class="co">    using the given keypair (d,N)&quot;&quot;&quot;</span></code></pre></div>
+<p>Test your code by generating RSA keys, and encrypting and then decrypting various test messages. For example, you might try encrypting and decrypting the following French text, in which all the various accents and line feeds should be preserved:</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">msg <span class="op">=</span> <span class="st">&quot;&quot;&quot;</span>
+<span class="st">Contrairement à une opinion répandue, le Lorem Ipsum n&#39;est pas simplement du </span>
+<span class="st">texte aléatoire. Il trouve ses racines dans une oeuvre de la littérature </span>
+<span class="st">latine classique datant de 45 av. J.-C., le rendant vieux de 2000 ans. Un </span>
+<span class="st">professeur du Hampden-Sydney College, en Virginie, s&#39;est intéressé à un </span>
+<span class="st">des mots latins les plus obscurs, consectetur, extrait d&#39;un passage du </span>
+<span class="st">Lorem Ipsum, et en étudiant tous les usages de ce mot dans la littérature </span>
+<span class="st">classique, découvrit la source incontestable du Lorem Ipsum. Il provient en </span>
+<span class="st">fait des sections 1.10.32 et 1.10.33 du &quot;De Finibus Bonorum et Malorum&quot; </span>
+<span class="st">(Des Suprêmes Biens et des Suprêmes Maux) de Cicéron. Cet ouvrage, très </span>
+<span class="st">populaire pendant la Renaissance, est un traité sur la théorie de l&#39;éthique. </span>
+<span class="st">Les premières lignes du Lorem Ipsum, &quot;Lorem ipsum dolor sit amet...&quot;, </span>
+<span class="st">proviennent de la section 1.10.32.</span>
+
+<span class="st">L&#39;extrait standard de Lorem Ipsum utilisé depuis le XVIè siècle est reproduit </span>
+<span class="st">ci-dessous pour les curieux. Les sections 1.10.32 et 1.10.33 du &quot;De Finibus</span>
+<span class="st">Bonorum et Malorum&quot; de Cicéron sont aussi reproduites dans leur version </span>
+<span class="st">originale, accompagnée de la traduction anglaise de H. Rackham (1914).</span>
+<span class="st">&quot;&quot;&quot;</span></code></pre></div>
+<p>This is an example of a triple-quoted string in Python. You can Google it to learn more. Note that you may need to use Python’s <code>print</code> function to format this string for nice printing in the terminal. If you are feeling ambitious, try a passage in another language, for instance try Chinese:</p>
+<div class="sourceCode"><pre class="sourceCode python"><code class="sourceCode python">msg <span class="op">=</span>
+<span class="co">&quot;&quot;&quot;</span>
+<span class="co">&quot;示界康藝流灣燈葉就人開服拿里提下服了開才的費上小她性入調看毛病寫可不對不戲又陸</span>
+<span class="co">沒節使英便文報，小坐他被上與：不木病觀展事，為養連研院，到人我高散喜代小化老上</span>
+<span class="co">三子小著？了生者產無沒斯平世服會如且氣響化上問的時對散如天……城條型男、樣少導麼</span>
+<span class="co">活，導山生什本意樹度多人看土安消還時持人，題能當用，記身量我算成光我但的人眼動</span>
+<span class="co">有片營：手市政亮：長子友銀著的現重世把好集我公應市不學。因議商亞說媽笑相的出招</span>
+<span class="co">檢著家導導的你，裡習著得的不養設治起立半的助孩式一望南這天乎舉回興孩至間管過冷</span>
+<span class="co">價；是結他政麼紅，看必間，客東和仍得興全原見有寫仍定感言百上是以間不青在有加遊</span>
+<span class="co">康中廣來當會苦推飛成看為須學天懷位那育真……安病上黑量，美紀從樂我：局日政，他黨</span>
+<span class="co">有險任孩，說加之，到農多。國對紀醫多不操，都土常小目力小考去麼：北近速亞的麗國</span>
+<span class="co">……後所軍總會招象的除制，太了坡發如最、或司一大老理年入為？動共東司做，局車中人</span>
+<span class="co">再山，更眼經頭要中關容出上們開中養！</span>
+<span class="co">&quot;&quot;&quot;</span></code></pre></div>
+<p>When you are satisfied, commit your changes and push them to Github as usual.</p>
+</body>
+</html>
